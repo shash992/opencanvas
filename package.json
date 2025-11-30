@@ -1,6 +1,6 @@
 {
   "name": "@shash992/opencanvas",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Local-first LLM workspace with infinite canvas, branching chats, RAG nodes, and multi-provider support",
   "keywords": [
