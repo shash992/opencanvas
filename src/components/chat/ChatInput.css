@@ -1,0 +1,125 @@
+.chat-input-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+}
+
+.chat-input-main {
+  display: flex;
+  align-items: center;
+}
+
+.chat-input-textarea {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: none;
+  min-height: 1.5rem;
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.chat-input-textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.chat-input-textarea:focus {
+  outline: none;
+}
+
+.chat-input-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chat-input-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chat-input-controls-left {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chat-input-controls-right {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.chat-input-icon-button {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.chat-input-icon-button:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.chat-input-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-input-icon-button.stop {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.chat-input-icon-button.stop:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.chat-input-send-button {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-primary);
+  transition: all 0.2s;
+}
+
+.chat-input-send-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.chat-input-send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-input-send-button svg {
+  width: 16px;
+  height: 16px;
+}
