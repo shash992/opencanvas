@@ -1,0 +1,41 @@
+# Source files (not needed in npm package)
+src/
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+eslint.config.js
+
+# Development files
+node_modules/
+.local/
+*.log
+
+# Documentation (except README)
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# Local data
+local_data/
+
+# Build artifacts (will be included via files field)
+# dist/ is included in package
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+

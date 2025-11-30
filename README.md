@@ -17,7 +17,24 @@ Local-first LLM workspace with infinite canvas, branching chats, RAG nodes, and 
 - Node.js 18+ and npm
 - (Optional) Ollama installed locally for offline mode
 
-### Installation
+### Installation Options
+
+#### Option 1: Install via npm (Recommended)
+
+**Global installation:**
+```bash
+npm install -g @shash992/opencanvas
+opencanvas
+```
+
+**Or use npx (no installation needed):**
+```bash
+npx @shash992/opencanvas
+```
+
+This will start OpenCanvas on `http://localhost:3000`
+
+#### Option 2: Clone and run locally
 
 1. **Clone the repository**
    ```bash

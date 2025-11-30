@@ -6,6 +6,8 @@ import ReactFlow, {
   useEdgesState,
   type Viewport as ReactFlowViewport,
   type Node,
+  type Edge,
+  type EdgeChange,
   type OnSelectionChangeParams,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
@@ -45,8 +47,81 @@ export default function CanvasMode() {
   const { loadSettings, initialized: settingsInitialized } = useSettingsStore()
 
   const [nodes, setNodesState, onNodesChange] = useNodesState(storeNodes)
-  const [edges, setEdgesState, onEdgesChange] = useEdgesState(storeEdges)
+  const [edges, setEdgesState, onEdgesChangeInternal] = useEdgesState(storeEdges)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
+
+  // Custom onEdgesChange handler that preserves edge types
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    // Apply changes to local state first
+    onEdgesChangeInternal(changes)
+    
+    // After React Flow processes changes, preserve edge types
+    // Use requestAnimationFrame to ensure React Flow has finished processing
+    requestAnimationFrame(() => {
+      const currentState = useCanvasStore.getState()
+      const storeEdges = currentState.edges
+      const currentNodes = currentState.nodes
+      
+      // Get the updated edges from React Flow's internal state
+      // We need to apply the changes to get the new edge list
+      let updatedEdges = [...edges]
+      
+      for (const change of changes) {
+        if (change.type === 'remove') {
+          updatedEdges = updatedEdges.filter(e => e.id !== change.id)
+        } else if (change.type === 'add') {
+          // Find type from store or determine from node types
+          const storeEdge = storeEdges.find(e => e.id === change.item.id)
+          const sourceNode = currentNodes.find(n => n.id === change.item.source)
+          const targetNode = currentNodes.find(n => n.id === change.item.target)
+          
+          let edgeType: 'context' | 'rag' = 'context'
+          if (storeEdge?.type && (storeEdge.type === 'context' || storeEdge.type === 'rag')) {
+            edgeType = storeEdge.type
+          } else if (sourceNode?.type === 'memory' && targetNode?.type === 'chat') {
+            edgeType = 'rag'
+          }
+          
+          updatedEdges.push({ ...change.item, type: edgeType })
+        } else if (change.type === 'select') {
+          updatedEdges = updatedEdges.map(e => 
+            e.id === change.id ? { ...e, selected: change.selected } : e
+          )
+        } else if (change.type === 'reset') {
+          // For reset changes, replace the edge entirely
+          const storeEdge = storeEdges.find(se => se.id === change.item.id)
+          const existingIndex = updatedEdges.findIndex(e => e.id === change.item.id)
+          if (existingIndex >= 0) {
+            const edgeType = (storeEdge?.type && (storeEdge.type === 'context' || storeEdge.type === 'rag'))
+              ? storeEdge.type
+              : 'context'
+            updatedEdges[existingIndex] = { ...change.item, type: edgeType }
+          }
+        }
+        // Note: Other change types are handled by React Flow internally
+      }
+      
+      // Ensure all edges have types preserved
+      const edgesWithTypes: Edge[] = updatedEdges.map(edge => {
+        const storeEdge = storeEdges.find(e => e.id === edge.id)
+        if (storeEdge?.type) {
+          return { ...edge, type: storeEdge.type }
+        }
+        // If not in store, determine from node types
+        const sourceNode = currentNodes.find(n => n.id === edge.source)
+        const targetNode = currentNodes.find(n => n.id === edge.target)
+        const edgeType = (sourceNode?.type === 'memory' && targetNode?.type === 'chat') 
+          ? 'rag' 
+          : 'context'
+        return { ...edge, type: edgeType }
+      })
+      
+      // Update edges with preserved types
+      setEdgesState(edgesWithTypes)
+      // Sync to store
+      setEdges(edgesWithTypes)
+    })
+  }, [edges, onEdgesChangeInternal, setEdgesState, setEdges])
 
   // Initialize storage and load canvas + settings
   useEffect(() => {
@@ -162,21 +237,95 @@ export default function CanvasMode() {
   }, [storeEdges, initialized, setEdgesState, edges])
 
   // Debounced save to store when local state changes
+  // CRITICAL: Must sync position changes, not just ID differences
   useEffect(() => {
     if (!initialized) return
+    
+    // Reduce debounce to 100ms for faster sync (was 1000ms)
     const timeoutId = setTimeout(() => {
-      setNodes(nodes)
-    }, 1000)
+      // Check for differences: IDs, positions, or any node properties
+      const storeNodeIds = new Set(storeNodes.map(n => n.id))
+      const localNodeIds = new Set(nodes.map(n => n.id))
+      const hasIdDifference = nodes.length !== storeNodes.length || 
+        nodes.some(n => !storeNodeIds.has(n.id)) ||
+        storeNodes.some(n => !localNodeIds.has(n.id))
+      
+      // Check for position changes (even if IDs match)
+      const hasPositionDifference = nodes.some(localNode => {
+        const storeNode = storeNodes.find(sn => sn.id === localNode.id)
+        if (!storeNode) return true // New node
+        // Compare positions
+        const localPos = localNode.position || { x: 0, y: 0 }
+        const storePos = storeNode.position || { x: 0, y: 0 }
+        return localPos.x !== storePos.x || localPos.y !== storePos.y
+      })
+      
+      // Check for other property changes (style, data, etc.)
+      const hasOtherDifference = nodes.some(localNode => {
+        const storeNode = storeNodes.find(sn => sn.id === localNode.id)
+        if (!storeNode) return true
+        // Compare style dimensions
+        const localWidth = (localNode.style?.width as number) || 400
+        const storeWidth = (storeNode.style?.width as number) || 400
+        const localHeight = (localNode.style?.height as number) || 500
+        const storeHeight = (storeNode.style?.height as number) || 500
+        return localWidth !== storeWidth || localHeight !== storeHeight
+      })
+      
+      const hasDifference = hasIdDifference || hasPositionDifference || hasOtherDifference
+      
+      if (hasDifference) {
+        console.log('🔄 Syncing nodes to store:', {
+          localNodeCount: nodes.length,
+          storeNodeCount: storeNodes.length,
+          hasIdDifference,
+          hasPositionDifference,
+          hasOtherDifference,
+          positionChanges: nodes
+            .filter(n => {
+              const sn = storeNodes.find(s => s.id === n.id)
+              if (!sn) return true
+              const localPos = n.position || { x: 0, y: 0 }
+              const storePos = sn.position || { x: 0, y: 0 }
+              return localPos.x !== storePos.x || localPos.y !== storePos.y
+            })
+            .map(n => ({
+              id: n.id,
+              position: n.position,
+              storePosition: storeNodes.find(s => s.id === n.id)?.position
+            }))
+        })
+        setNodes(nodes)
+      }
+    }, 100) // Reduced from 1000ms to 100ms
     return () => clearTimeout(timeoutId)
-  }, [nodes, initialized, setNodes])
+  }, [nodes, initialized, setNodes, storeNodes])
 
   useEffect(() => {
     if (!initialized) return
+    
+    // Reduce debounce to 100ms for faster sync (was 1000ms)
     const timeoutId = setTimeout(() => {
-      setEdges(edges)
-    }, 1000)
+      // Only sync if there's a difference
+      const storeEdgeIds = new Set(storeEdges.map(e => e.id))
+      const localEdgeIds = new Set(edges.map(e => e.id))
+      const hasDifference = edges.length !== storeEdges.length ||
+        edges.some(e => !storeEdgeIds.has(e.id)) ||
+        storeEdges.some(e => !localEdgeIds.has(e.id))
+      
+      if (hasDifference) {
+        console.log('🔄 Syncing edges to store:', {
+          localEdgeCount: edges.length,
+          localEdgeIds: edges.map(e => e.id),
+          localEdgeTypes: edges.map(e => ({ id: e.id, type: e.type, source: e.source, target: e.target })),
+          storeEdgeCount: storeEdges.length,
+          hasDifference
+        })
+        setEdges(edges)
+      }
+    }, 100) // Reduced from 1000ms to 100ms
     return () => clearTimeout(timeoutId)
-  }, [edges, initialized, setEdges])
+  }, [edges, initialized, setEdges, storeEdges])
 
   const handleConnect = useCallback((connection: any) => {
     try {
@@ -512,7 +661,7 @@ export default function CanvasMode() {
         onNodesDelete={handleNodesDelete}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        fitView
+        fitView={false}
         defaultViewport={storeViewport}
         minZoom={0.1}
         maxZoom={2}

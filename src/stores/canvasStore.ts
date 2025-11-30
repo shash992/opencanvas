@@ -123,10 +123,11 @@ export const useCanvasStore = create<CanvasStoreState>((set, get) => ({
       // Convert ReactFlow Node[] to CanvasNode[]
       const canvasNodes: CanvasNode[] = nodes.map((node) => {
         const nodeData = node.data || {}
+        const position = node.position || { x: 0, y: 0 }
         return {
           id: node.id,
           type: (node.type || 'chat') as 'chat' | 'memory',
-          position: node.position,
+          position: position, // Ensure position is always defined
           size: {
             width: (node.style?.width as number) || 400,
             height: (node.style?.height as number) || 500,
@@ -134,6 +135,12 @@ export const useCanvasStore = create<CanvasStoreState>((set, get) => ({
           data: nodeData,
         }
       })
+      
+      // Log positions being saved for debugging
+      console.log('💾 Saving node positions:', canvasNodes.map(n => ({
+        id: n.id,
+        position: n.position
+      })))
 
       // Convert ReactFlow Edge[] to CanvasEdge[]
       const canvasEdges: CanvasEdge[] = edges.map((edge) => ({
@@ -180,7 +187,12 @@ export const useCanvasStore = create<CanvasStoreState>((set, get) => ({
       }
       
       await storage.saveCanvasSession(sessionId, updatedSession)
-      console.log('Saved session:', sessionId, 'with', canvasNodes.length, 'nodes')
+      console.log('Saved session:', sessionId, 'with', canvasNodes.length, 'nodes', {
+        nodeIds: canvasNodes.map(n => n.id),
+        edgeCount: canvasEdges.length,
+        edgeIds: canvasEdges.map(e => e.id),
+        edgeTypes: canvasEdges.map(e => ({ id: e.id, type: e.type, source: e.source, target: e.target }))
+      })
       
       // Always reload sessions to ensure sidebar is updated (sorted by last changed)
       const updatedSessions = await storage.getAllCanvasSessions()
@@ -328,10 +340,11 @@ export const useCanvasStore = create<CanvasStoreState>((set, get) => ({
         // Convert CanvasNode[] to ReactFlow Node[]
         const reactFlowNodes: Node[] = (canvasState.nodes || []).map((node) => {
           const nodeData = node.data || {}
+          const position = node.position || { x: 0, y: 0 }
           return {
             id: node.id,
             type: node.type || 'chat',
-            position: node.position || { x: 0, y: 0 },
+            position: position, // Use saved position
             data: nodeData,
             style: {
               width: node.size?.width || 400,
@@ -339,6 +352,12 @@ export const useCanvasStore = create<CanvasStoreState>((set, get) => ({
             },
           }
         })
+        
+        // Log positions being loaded for debugging
+        console.log('📦 Loading node positions:', reactFlowNodes.map(n => ({
+          id: n.id,
+          position: n.position
+        })))
 
         // Convert CanvasEdge[] to ReactFlow Edge[]
         // Auto-detect RAG edges: if source is memory node and target is chat node, it's a RAG edge

@@ -1,14 +1,48 @@
 {
-  "name": "opencanvas",
-  "version": "0.1.0",
+  "name": "@shash992/opencanvas",
+  "version": "0.1.4",
   "type": "module",
-  "description": "Local-first LLM workspace with infinite canvas and branching chats",
+  "description": "Local-first LLM workspace with infinite canvas, branching chats, RAG nodes, and multi-provider support",
+  "keywords": [
+    "llm",
+    "ai",
+    "canvas",
+    "rag",
+    "chat",
+    "local-first",
+    "privacy",
+    "ollama",
+    "openai",
+    "openrouter"
+  ],
+  "author": "shash992",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shash992/opencanvas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shash992/opencanvas/issues"
+  },
+  "homepage": "https://github.com/shash992/opencanvas#readme",
+  "bin": {
+    "opencanvas": "bin/opencanvas.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "public",
+    "package.json",
+    "README.md"
+  ],
   "scripts": {
     "dev": "vite",
     "prebuild": "cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.js || true",
     "build": "npm run prebuild && tsc && vite build",
+    "prepublishOnly": "npm run build",
     "preview": "vite preview",
-    "lint": "eslint . --max-warnings 0"
+    "lint": "eslint . --max-warnings 0",
+    "start": "node bin/opencanvas.js"
   },
   "dependencies": {
     "idb": "^8.0.0",

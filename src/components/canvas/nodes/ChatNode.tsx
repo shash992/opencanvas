@@ -43,9 +43,17 @@ function ChatNode({ data, selected, id }: NodeProps<ChatNodeData>) {
   // This implements: "When two nodes are connected, the donor node context is injected to the receiver node context"
   const getContextFromDonorNodes = (): Array<{ nodeId: string; nodeTitle: string; messages: Message[] }> => {
     // Get fresh edges and nodes from store
+    // IMPORTANT: Also check React Flow's local state if store is missing nodes
+    // This handles the case where React Flow has nodes that haven't synced to store yet
     const currentState = useCanvasStore.getState()
-    const currentEdges = currentState.edges
-    const currentNodes = currentState.nodes
+    let currentEdges = currentState.edges
+    let currentNodes = currentState.nodes
+    
+    // If we're in a React Flow component context, also check the local React Flow state
+    // This is a fallback to ensure we have all nodes even if store sync is delayed
+    // Note: We can't directly access React Flow's state here, but we can use the nodes/edges from props
+    // Actually, we're already getting fresh state from store, so this should be fine
+    // The real issue might be that nodes aren't being added to store properly
     
     // Find all edges where this node is the receiver (target)
     // First, get ALL incoming edges (regardless of type) for debugging
@@ -65,7 +73,10 @@ function ChatNode({ data, selected, id }: NodeProps<ChatNodeData>) {
         target: e.target,
         type: e.type || 'undefined',
         hasType: !!e.type
-      }))
+      })),
+      totalNodesInStore: currentNodes.length,
+      nodeIdsInStore: currentNodes.map(n => ({ id: n.id, type: n.type })),
+      totalEdgesInStore: currentEdges.length
     })
     
     const donorNodes: Array<{ nodeId: string; nodeTitle: string; messages: Message[] }> = []
